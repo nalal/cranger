@@ -1,5 +1,5 @@
 main: prep
-	g++ -lncurses -std=gnu++17 -lpthread main.cpp -o bin/curseranger
+	g++ -lncurses -std=gnu++17 -lpthread main.cpp -o bin/cranger
 
 prep:
 	mkdir -p bin
