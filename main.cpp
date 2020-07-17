@@ -14,6 +14,8 @@ NCURSES FUNCTIONS TO REMEMBER BECAUSE I'M SLOW:
 namespace fs = std::filesystem;
 using std::thread;
 
+fs::path path_data = fs::current_path();
+
 //Total windows to be loaded, (this shouldn't be changed)
 const int total_windows = 3;
 window_obj windows[total_windows];
@@ -41,7 +43,7 @@ void print_to_window(
 	int start_z = 1
 )
 {
-	mvwprintw(win, 1, 1, "%s", input);
+	mvwprintw(win, start_y, start_z, "%s", input);
 	wrefresh(win);
 }
 
@@ -56,6 +58,8 @@ void mk_window(int win_num, int win_h, int win_w)
 	window_obj win_obj;
 	win_obj.win_ptr = win;
 	windows[win_num - 1] = win_obj;
+    nodelay(windows[win_num - 1].win_ptr, true);
+    keypad(windows[win_num - 1].win_ptr, true);
 }
 
 //Create the windows as needed
@@ -85,21 +89,53 @@ char * get_username()
 void window_update()
 {
 	struct winsize w = get_win();
-	fs::path path_data = fs::current_path();
-	printw("ACTIVE DIR: %s", path_data.c_str());
+    move(0,0);
+    clrtoeol();
+	mvprintw(0,0, "ACTIVE DIR: %s", path_data.c_str());
 	mvprintw(w.ws_row - 1, 0, "USER: %s", get_username());
 	refresh();
-	print_to_window(windows[0].win_ptr, "test");
-	print_to_window(windows[1].win_ptr, "test");
+	//print_to_window(windows[0].win_ptr, "test");
+    int counter_0 = 1;
+    for(auto& p: fs::directory_iterator(path_data.parent_path().c_str()))
+    {
+        char file[NAME_MAX];
+        sprintf(file, "%s", p.path().filename().c_str());
+        if(counter_0 < w.ws_row - 3)
+            print_to_window(windows[0].win_ptr, file, counter_0);
+        counter_0++;
+    }
+	//print_to_window(windows[1].win_ptr, "test");
+    int counter_1 = 1;
+    for(auto& p: fs::directory_iterator(path_data.c_str()))
+    {
+        char file[NAME_MAX];
+        sprintf(file, "%s", p.path().filename().c_str());
+        if(counter_1 < w.ws_row - 3)
+            print_to_window(windows[1].win_ptr, file, counter_1);
+        counter_1++;
+    }
 	print_to_window(windows[2].win_ptr, "test");
+//    int counter_2 = 1;
+//    for(auto& p: fs::directory_iterator(path_data.c_str()))
+//    {
+//        char file[NAME_MAX];
+//        sprintf(file, "%s", p.path().filename().c_str());
+//        if(counter_2 < w.ws_row - 3)
+//            print_to_window(windows[2].win_ptr, file, counter_2);
+//        counter_2++;
+//    }
 }
+
+int keypress;
 
 //Refreshing function loaded to new thread
 void refresher()
 {
 	while(running)
 	{
+        usleep(500000);
 		window_update();
+        keypress = wgetch(windows[2].win_ptr);
 	}
 }
 
@@ -107,11 +143,14 @@ int main()
 {
 	initscr();
 	cbreak();
+    //noecho();
 	create_windows();
 	//Launch refresh func on new thread
 	thread(refresher).detach();
-	getch();
+    getch();
 	running = false;
+    usleep(500000);
 	endwin();
+    printf("%i\n", keypress);
 	return 0;
 }

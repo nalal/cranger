@@ -6,6 +6,7 @@
 #include <math.h> 
 #include <stdlib.h>
 #include <pwd.h>
+#include <linux/limits.h>
 
 //C++ includes
 #include <filesystem>
