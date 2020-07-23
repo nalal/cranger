@@ -62,15 +62,18 @@ void mk_window(int win_num, int win_h, int win_w)
     keypad(windows[win_num - 1].win_ptr, true);
 }
 
+int win_w;
+
 //Create the windows as needed
 void create_windows()
 {
 	struct winsize w = get_win();
 	double width = double(w.ws_col) / 3;
 	int w_int = int(floor(width));
+	win_w = w_int;
 	for(int i = 1; i <= total_windows; i++)
 	{
-		if (i != 0)
+		if (i != 4)
 			mk_window(i, w.ws_row - 2, w_int);
 		else
 			mk_window(i, w.ws_row, w.ws_col);
@@ -89,13 +92,15 @@ char * get_username()
 	return "";
 }
 
+int files_in_dir = 0;
+
 //Update window
 void window_update()
 {
+	files_in_dir = 0;
 	struct winsize w = get_win();
     move(0,0);
     clrtoeol();
-	refresh();
 	//print_to_window(windows[0].win_ptr, "test");
     int counter_0 = 1;
     for(auto& p: fs::directory_iterator(path_data.parent_path().c_str()))
@@ -113,12 +118,22 @@ void window_update()
         char file[NAME_MAX];
         sprintf(file, "%s", p.path().filename().c_str());
         if(counter_1 < w.ws_row - 3)
-            print_to_window(windows[1].win_ptr, file, counter_1);
+   		{
+			files_in_dir++;
+   		    print_to_window(windows[1].win_ptr, file, counter_1);
+			wclrtoeol(windows[1].win_ptr);
+		}
         counter_1++;
     }
-	print_to_window(windows[2].win_ptr, "test");
+	
+    print_to_window(windows[2].win_ptr, "test");
 	mvprintw(0,0, "ACTIVE DIR: %s", path_data.c_str());
 	mvprintw(w.ws_row - 1, 0, "USER: %s", get_username());
+	box(windows[1].win_ptr, 0, 0);
+	box(windows[2].win_ptr, 0, 0);
+	box(windows[0].win_ptr, 0, 0);
+	refresh();
+	
 //    int counter_2 = 1;
 //    for(auto& p: fs::directory_iterator(path_data.c_str()))
 //    {
@@ -142,23 +157,31 @@ void open_selected(char * selected_file)
 	
 }
 
+
+int cur_x = 1;
+int cur_y = 1;
+
 void scroll_down()
 {
-	
+	if(cur_y != files_in_dir)
+		cur_y++;
 }
 
 void scroll_up()
 {
-	
+	if(cur_y != 1)
+		cur_y--;
 }
 
 //Refreshing function loaded to new thread
 void refresher()
-{
-	window_update();
-	
+{	
 	while(running)
 	{
+		window_update();
+		//wmove(windows[1].win_ptr, cur_y, cur_x);
+		mvwchgat(windows[1].win_ptr, cur_y, 1, win_w - 2, A_STANDOUT, 0, NULL);
+		wrefresh(windows[1].win_ptr);
 		keypress = wgetch(windows[0].win_ptr);
 		switch(keypress)
 		{
@@ -183,6 +206,7 @@ void refresher()
 				running = false;
 				break;
 			default:
+				printf("%i\n", keypress);
 				break;
 		}
 	}
