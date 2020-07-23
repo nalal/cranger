@@ -17,7 +17,7 @@ using std::thread;
 fs::path path_data = fs::current_path();
 
 //Total windows to be loaded, (this shouldn't be changed)
-const int total_windows = 3;
+const int total_windows = 4;
 window_obj windows[total_windows];
 
 bool running = true;
@@ -58,7 +58,7 @@ void mk_window(int win_num, int win_h, int win_w)
 	window_obj win_obj;
 	win_obj.win_ptr = win;
 	windows[win_num - 1] = win_obj;
-    nodelay(windows[win_num - 1].win_ptr, true);
+    //nodelay(windows[win_num - 1].win_ptr, true);
     keypad(windows[win_num - 1].win_ptr, true);
 }
 
@@ -70,7 +70,10 @@ void create_windows()
 	int w_int = int(floor(width));
 	for(int i = 1; i <= total_windows; i++)
 	{
-		mk_window(i, w.ws_row - 2, w_int);
+		if (i != 0)
+			mk_window(i, w.ws_row - 2, w_int);
+		else
+			mk_window(i, w.ws_row, w.ws_col);
 	}
 }
 
@@ -86,13 +89,12 @@ char * get_username()
 	return "";
 }
 
+//Update window
 void window_update()
 {
 	struct winsize w = get_win();
     move(0,0);
     clrtoeol();
-	mvprintw(0,0, "ACTIVE DIR: %s", path_data.c_str());
-	mvprintw(w.ws_row - 1, 0, "USER: %s", get_username());
 	refresh();
 	//print_to_window(windows[0].win_ptr, "test");
     int counter_0 = 1;
@@ -115,6 +117,8 @@ void window_update()
         counter_1++;
     }
 	print_to_window(windows[2].win_ptr, "test");
+	mvprintw(0,0, "ACTIVE DIR: %s", path_data.c_str());
+	mvprintw(w.ws_row - 1, 0, "USER: %s", get_username());
 //    int counter_2 = 1;
 //    for(auto& p: fs::directory_iterator(path_data.c_str()))
 //    {
@@ -131,12 +135,28 @@ int keypress;
 //Refreshing function loaded to new thread
 void refresher()
 {
-	while(running)
+	window_update();
+	
+	keypress = wgetch(windows[0].win_ptr);
+	switch(keypress)
 	{
-        usleep(500000);
-		window_update();
-        keypress = wgetch(windows[2].win_ptr);
+		case KEY_LEFT:
+			printf("LEFT");
+			break;
+		case KEY_RIGHT:
+			printf("RIGHT");
+			break;
+		case KEY_DOWN:
+			printf("DOWN");
+			break;
+		case KEY_UP:
+			printf("UP");
+			break;
+		default:
+			printf("UNKNOWN KEY");
+			break;
 	}
+	running = false;
 }
 
 int main()
@@ -147,9 +167,10 @@ int main()
 	create_windows();
 	//Launch refresh func on new thread
 	thread(refresher).detach();
-    getch();
-	running = false;
-    usleep(500000);
+    while(running)
+    {
+        usleep(500000);
+	}
 	endwin();
     printf("%i\n", keypress);
 	return 0;
