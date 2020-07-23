@@ -132,31 +132,60 @@ void window_update()
 
 int keypress;
 
+void up_dir()
+{
+	
+}
+
+void open_selected(char * selected_file)
+{
+	
+}
+
+void scroll_down()
+{
+	
+}
+
+void scroll_up()
+{
+	
+}
+
 //Refreshing function loaded to new thread
 void refresher()
 {
 	window_update();
 	
-	keypress = wgetch(windows[0].win_ptr);
-	switch(keypress)
+	while(running)
 	{
-		case KEY_LEFT:
-			printf("LEFT");
-			break;
-		case KEY_RIGHT:
-			printf("RIGHT");
-			break;
-		case KEY_DOWN:
-			printf("DOWN");
-			break;
-		case KEY_UP:
-			printf("UP");
-			break;
-		default:
-			printf("UNKNOWN KEY");
-			break;
+		keypress = wgetch(windows[0].win_ptr);
+		switch(keypress)
+		{
+			//BACK FUNCTION
+			case KEY_LEFT:
+				up_dir();
+				break;
+			//OPEN FUNCTION
+			case KEY_RIGHT:
+				//open_selected();
+				break;
+			//SCROLL DOWN
+			case KEY_DOWN:
+				scroll_down();
+				break;
+			//SCROLL UP
+			case KEY_UP:
+				scroll_up();
+				break;
+			//TERMINATE
+			case 27:
+				running = false;
+				break;
+			default:
+				break;
+		}
 	}
-	running = false;
 }
 
 int main()
