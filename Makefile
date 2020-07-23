@@ -4,5 +4,9 @@ main: prep
 prep:
 	mkdir -p bin
 
+install: main
+	mkdir -p ~/.local/bin
+	cp bin/*  ~/.local/bin
+
 clean:
 	rm -rf bin
