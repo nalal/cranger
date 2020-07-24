@@ -1,5 +1,6 @@
 //C includes
 #include <stdio.h>
+#include <string.h>
 #include <ncurses.h>
 #include <sys/ioctl.h>
 #include <unistd.h>

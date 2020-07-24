@@ -62,7 +62,7 @@ void mk_window(int win_num, int win_h, int win_w)
     keypad(windows[win_num - 1].win_ptr, true);
 }
 
-int win_w;
+int win_wi;
 
 //Create the windows as needed
 void create_windows()
@@ -70,7 +70,7 @@ void create_windows()
 	struct winsize w = get_win();
 	double width = double(w.ws_col) / 3;
 	int w_int = int(floor(width));
-	win_w = w_int;
+	win_wi = w_int;
 	for(int i = 1; i <= total_windows; i++)
 	{
 		if (i != 4)
@@ -147,19 +147,45 @@ void window_update()
 
 int keypress;
 
+int cur_x = 1;
+int cur_y = 1;
+
 void up_dir()
 {
-	
+	path_data = path_data.parent_path();
+	werase(windows[0].win_ptr);
+	werase(windows[1].win_ptr);
+	werase(windows[2].win_ptr);
+	cur_y = 1;
 }
 
 void open_selected(char * selected_file)
 {
-	
+	char path[2550];
+	sprintf(path, "%s/%s", path_data.c_str(), selected_file);
+	char * last_space = strrchr(path, 32);
+	if(path[last_space - path + 1] == '\0')
+	{
+		for(int i = last_space - path + 1; i > 0; i--)
+		{
+			if(path[i] == ' ' || path[i] == '\0')
+				path[i] = NULL;
+			else
+			{
+				path[i+1] = '\0';
+				break;
+			}
+		}
+	}
+	if(fs::exists(path) && fs::is_directory(path))
+	{
+		path_data = path;
+		werase(windows[0].win_ptr);
+		werase(windows[1].win_ptr);
+		werase(windows[2].win_ptr);
+		cur_y = 1;
+	}
 }
-
-
-int cur_x = 1;
-int cur_y = 1;
 
 void scroll_down()
 {
@@ -180,7 +206,7 @@ void refresher()
 	{
 		window_update();
 		//wmove(windows[1].win_ptr, cur_y, cur_x);
-		mvwchgat(windows[1].win_ptr, cur_y, 1, win_w - 2, A_STANDOUT, 0, NULL);
+		mvwchgat(windows[1].win_ptr, cur_y, 1, win_wi - 2, A_STANDOUT, 0, NULL);
 		wrefresh(windows[1].win_ptr);
 		keypress = wgetch(windows[0].win_ptr);
 		switch(keypress)
@@ -191,7 +217,10 @@ void refresher()
 				break;
 			//OPEN FUNCTION
 			case KEY_RIGHT:
-				//open_selected();
+				char hold[FILENAME_MAX];
+				//printf("%i", win_wi);
+				winnstr(windows[1].win_ptr, hold, win_wi - 2);
+				open_selected(hold);
 				break;
 			//SCROLL DOWN
 			case KEY_DOWN:
@@ -219,12 +248,7 @@ int main()
     //noecho();
 	create_windows();
 	//Launch refresh func on new thread
-	thread(refresher).detach();
-    while(running)
-    {
-        usleep(500000);
-	}
+	refresher();
 	endwin();
-    printf("%i\n", keypress);
 	return 0;
 }
