@@ -26,3 +26,5 @@ struct window_obj {
 	enum win_type this_win_type;
 	WINDOW * win_ptr;
 };
+
+enum scroll_type{UP, DOWN};

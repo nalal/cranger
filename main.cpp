@@ -63,6 +63,7 @@ void mk_window(int win_num, int win_h, int win_w)
 }
 
 int win_wi;
+int win_le;
 
 //Create the windows as needed
 void create_windows()
@@ -71,6 +72,7 @@ void create_windows()
 	double width = double(w.ws_col) / 3;
 	int w_int = int(floor(width));
 	win_wi = w_int;
+	win_le = w.ws_row;
 	for(int i = 1; i <= total_windows; i++)
 	{
 		if (i != 4)
@@ -125,24 +127,12 @@ void window_update()
 		}
         counter_1++;
     }
-	
-    print_to_window(windows[2].win_ptr, "test");
 	mvprintw(0,0, "ACTIVE DIR: %s", path_data.c_str());
 	mvprintw(w.ws_row - 1, 0, "USER: %s", get_username());
+	refresh();
 	box(windows[1].win_ptr, 0, 0);
 	box(windows[2].win_ptr, 0, 0);
 	box(windows[0].win_ptr, 0, 0);
-	refresh();
-	
-//    int counter_2 = 1;
-//    for(auto& p: fs::directory_iterator(path_data.c_str()))
-//    {
-//        char file[NAME_MAX];
-//        sprintf(file, "%s", p.path().filename().c_str());
-//        if(counter_2 < w.ws_row - 3)
-//            print_to_window(windows[2].win_ptr, file, counter_2);
-//        counter_2++;
-//    }
 }
 
 int keypress;
@@ -157,6 +147,57 @@ void up_dir()
 	werase(windows[1].win_ptr);
 	werase(windows[2].win_ptr);
 	cur_y = 1;
+}
+
+void print_dir(char * dir)
+{
+	int counter_1 = 1;
+	for(auto& p: fs::directory_iterator(dir))
+    {
+        char file[NAME_MAX];
+        sprintf(file, "%s", p.path().filename().c_str());
+		if(counter_1 < win_le - 3)
+		{
+			files_in_dir++;
+			print_to_window(windows[2].win_ptr, file, counter_1);
+			wclrtoeol(windows[2].win_ptr);
+		}
+        counter_1++;
+    }
+}
+
+void print_selected_file()
+{
+	werase(windows[2].win_ptr);
+	wmove(windows[1].win_ptr, cur_y, 1);
+	char hold[FILENAME_MAX];
+	winnstr(windows[1].win_ptr, hold, win_wi - 2);
+	char * last_space = strrchr(hold, 32);
+	if(hold[last_space - hold + 1] == '\0')
+	{
+		for(int i = last_space - hold + 1; i > 0; i--)
+		{
+			if(hold[i] == ' ' || hold[i] == '\0')
+				hold[i] = NULL;
+			else
+			{
+				hold[i+1] = '\0';
+				break;
+			}
+		}
+	}
+	char target[2550];
+	sprintf(target, "%s/%s", path_data.c_str(), hold);
+	if(fs::exists(target))
+	{
+		if(!fs::is_directory(target))
+			print_to_window(windows[2].win_ptr, hold);
+		else
+			if(!fs::is_empty(target))
+				print_dir(target);
+	}
+	wrefresh(windows[2].win_ptr);
+	box(windows[2].win_ptr, 0, 0);
 }
 
 void open_selected(char * selected_file)
@@ -187,16 +228,23 @@ void open_selected(char * selected_file)
 	}
 }
 
-void scroll_down()
+void scroll_ud(scroll_type scrolling)
 {
-	if(cur_y != files_in_dir)
-		cur_y++;
-}
-
-void scroll_up()
-{
-	if(cur_y != 1)
-		cur_y--;
+	switch(scrolling)
+	{
+		case UP:
+			if(cur_y != 1)
+				cur_y--;
+			else
+				return;
+			break;
+		case DOWN:
+			if(cur_y != files_in_dir && files_in_dir != 0)
+				cur_y++;
+			else
+				return;
+			break;
+	}
 }
 
 //Refreshing function loaded to new thread
@@ -207,7 +255,9 @@ void refresher()
 		window_update();
 		//wmove(windows[1].win_ptr, cur_y, cur_x);
 		mvwchgat(windows[1].win_ptr, cur_y, 1, win_wi - 2, A_STANDOUT, 0, NULL);
+		print_selected_file();
 		wrefresh(windows[1].win_ptr);
+		wrefresh(windows[2].win_ptr);
 		keypress = wgetch(windows[0].win_ptr);
 		switch(keypress)
 		{
@@ -218,17 +268,16 @@ void refresher()
 			//OPEN FUNCTION
 			case KEY_RIGHT:
 				char hold[FILENAME_MAX];
-				//printf("%i", win_wi);
 				winnstr(windows[1].win_ptr, hold, win_wi - 2);
 				open_selected(hold);
 				break;
 			//SCROLL DOWN
 			case KEY_DOWN:
-				scroll_down();
+				scroll_ud(DOWN);
 				break;
 			//SCROLL UP
 			case KEY_UP:
-				scroll_up();
+				scroll_ud(UP);
 				break;
 			//TERMINATE
 			case 27:
@@ -247,7 +296,7 @@ int main()
 	cbreak();
     //noecho();
 	create_windows();
-	//Launch refresh func on new thread
+	//Launch refresh func
 	refresher();
 	endwin();
 	return 0;
